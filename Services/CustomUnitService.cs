@@ -57,10 +57,12 @@ namespace SmartScaleApi.Services
                 // Parse the response and create CustomUnit and Sample models
                 var units = ParseResponse(response.Text);
                 var exampleUnits = "";
+                var i = 1;
                 foreach (var unit in units)
                 {
-                    exampleUnits += unit.Unit + ", ";
+                    exampleUnits = i == units.Capacity ? exampleUnits + unit.Unit : exampleUnits + unit.Unit + ",";
                     await _customUnitRepository.AddAsync(unit);
+                    i++;
                 }
                 await _customUnitRepository.AddSampleAsync(new Sample
                 {
