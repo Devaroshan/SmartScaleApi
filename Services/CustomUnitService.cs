@@ -30,6 +30,7 @@ namespace SmartScaleApi.Services
 
             // Replace the placeholder 'x' with the actual numeric value
             string script = customUnit.ConversionFormulae.Replace("x", request.Value.ToString());
+            script = script.Replace("/", ".0/");
 
             // Evaluate the formula using CSharpScript
             var result = await CSharpScript.EvaluateAsync<double>(script, ScriptOptions.Default.WithReferences(typeof(Math).Assembly).WithImports("System"));
@@ -51,9 +52,12 @@ namespace SmartScaleApi.Services
             var sampleUnits = await _customUnitRepository.GetSampleByNameAsync(sample);
             if (sampleUnits == null)
             {
-                var prompt = $"Provide the commonly used units for measuring {sample} and the conversion formulae to the standard unit for each unit. Format the response as follows: \"StandardUnit | Unit1: ConversionFormula1| Unit2: ConversionFormula2| ...\". Ensure the conversion formulae are compatible with C# scripting, using expressions like \"Math.Pow(10, -9)*x\" for powers, with x representing unit. Do not include any additional text or explanations.";
+                var prompt = $"Provide the commonly used units for measuring {sample} samples and the formulae to convert each unit to standard unit. Format the response as follows: \"StandardUnit | Unit1: ConversionFormula1| Unit2: ConversionFormula2| ...\". Ensure the conversion formulae are compatible with C# scripting, using expressions like \"Math.Pow(10, -9)*x\" for powers, with x representing unit. Do not include any additional text or explanations.if something irrelevant is given respond wrong.";
                 var response = await _chatClient.GetResponseAsync(prompt);
-
+                if (response.Text == "wrong")
+                {
+                    return null;
+                }
                 // Parse the response and create CustomUnit and Sample models
                 var units = ParseResponse(response.Text);
                 var exampleUnits = "";
@@ -82,7 +86,7 @@ namespace SmartScaleApi.Services
             foreach (var pair in unitPairs)
             {
                 var parts = pair.Split(':');
-                if (parts.Length == 2)
+                if (parts.Length == 2 && parts[1].Trim() != "x")
                 {
                     var unit = new CustomUnit
                     {
